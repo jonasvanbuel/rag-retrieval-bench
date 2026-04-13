@@ -1,0 +1,315 @@
+{
+  "schema_version": "1.0",
+  "description": "AI-generated evaluation questions for the RAG retrieval benchmark, cross-verified by multiple models against the source papers. Each question has an authoritative reference answer grounded in the paper content. Do not modify reference_answer entries after evaluation begins \u2014 the entire benchmark is measured against these.",
+  "question_types": {
+    "factual": "Specific, verifiable fact from one paper. Has a single correct answer.",
+    "conceptual": "Requires understanding of a concept or argument that spans a paper or multiple papers. Answer is a synthesis, not a quote.",
+    "multi_hop": "Requires finding and connecting information from two or more papers.",
+    "unanswerable": "Not covered by the corpus. A good RAG system should return low confidence or explicitly say it cannot answer \u2014 not hallucinate."
+  },
+  "questions": [
+    {
+      "id": "q001",
+      "type": "factual",
+      "question": "Which paper introduced the Fusion-in-Decoder (FiD) approach for open-domain question answering, and what is its core mechanism?",
+      "reference_answer": "Fusion-in-Decoder was introduced by Izacard and Grave in 'Leveraging Passage Retrieval with Generative Models for Open Domain Question Answering' (arXiv 2007.01282). The core mechanism is to encode each retrieved passage independently with the encoder, then concatenate all encoded representations and pass them to a single decoder that generates the answer. This allows the decoder to attend over all passages jointly during generation, while avoiding the quadratic cost of encoding all passages together in a single forward pass.",
+      "source_papers": [
+        "2007.01282"
+      ]
+    },
+    {
+      "id": "q002",
+      "type": "factual",
+      "question": "What retrieval component does the original RAG paper (Lewis et al., 2020) use, and what is the non-parametric memory it indexes?",
+      "reference_answer": "The original RAG paper uses Dense Passage Retrieval (DPR) as its retriever. The non-parametric memory is a dense vector index of Wikipedia \u2014 specifically a 21-million passage dump of English Wikipedia. The parametric memory is a pre-trained BART seq2seq model used as the generator.",
+      "source_papers": [
+        "2005.11401"
+      ]
+    },
+    {
+      "id": "q003",
+      "type": "factual",
+      "question": "What is the RAGAS framework and which four metrics does it define for evaluating retrieval-augmented generation?",
+      "reference_answer": "RAGAS (Retrieval Augmented Generation Assessment) is an LLM-based, reference-free evaluation framework for RAG pipelines introduced in arXiv 2309.15217. The paper defines three core metrics (not four): (1) Faithfulness \u2014 whether the generated answer is grounded in the retrieved context; claims in the answer are extracted and verified against the context by an LLM. (2) Answer Relevance \u2014 whether the answer directly addresses the question; measured by generating reverse questions from the answer and checking embedding similarity with the original question. (3) Context Relevance \u2014 whether the retrieved context is focused and contains as little irrelevant information as possible; measured by extracting only the sentences needed to answer the question and computing the ratio to total context length. RAGAS uses an LLM (GPT-3.5-turbo in the paper) as a judge at each step and requires no human annotations \u2014 only the question, context, and generated answer are needed. Note: the RAGAS software library has since introduced additional metrics (e.g., Context Recall), but these are not defined in the original 2309.15217 paper.",
+      "source_papers": [
+        "2309.15217"
+      ]
+    },
+    {
+      "id": "q004",
+      "type": "factual",
+      "question": "What is the MaxSim operation in ColBERT and why does it make large-scale retrieval feasible?",
+      "reference_answer": "MaxSim is ColBERT's late interaction scoring function. For query Q and document D, each query token embedding is compared against all document token embeddings via dot product; the maximum similarity per query token is summed across all query tokens: score(Q,D) = \u03a3_qi max_dj (qi \u00b7 dj). This makes large-scale retrieval feasible because document token embeddings can be pre-computed and indexed offline. At query time only the small query representation needs computing, and MaxSim can be approximated via vector search rather than exhaustive comparison. ColBERTv2 adds residual compression to further reduce the index footprint.",
+      "source_papers": [
+        "2004.12832",
+        "2112.01488"
+      ]
+    },
+    {
+      "id": "q005",
+      "type": "factual",
+      "question": "What problem does ANCE solve compared to standard dense retrieval training, and how does it solve it?",
+      "reference_answer": "Standard dense retrieval training uses static negatives (random or BM25 hard negatives selected once), which become easy for the model to distinguish as training progresses. The negatives stop being representative of inference-time hard cases. ANCE (arXiv 2007.00808) solves this by dynamically refreshing hard negatives during training: it periodically rebuilds an ANN index of the full corpus using the current model checkpoint, then mines the top-ranked passages that are not gold answers as the new hard negatives. This keeps the training distribution aligned with what the model finds hard at each stage of training.",
+      "source_papers": [
+        "2007.00808"
+      ]
+    },
+    {
+      "id": "q006",
+      "type": "factual",
+      "question": "How does SPLADE produce sparse representations, and what is the role of the MLM head in its architecture?",
+      "reference_answer": "SPLADE (arXiv 2107.05720) produces sparse term-weight vectors over the full vocabulary using the BERT MLM head. For each token in the input, the MLM head produces a logit over all vocabulary terms. SPLADE applies a log-saturation function (log(1 + ReLU(x))) to these logits and then takes a max-pooling across all input token positions. The result is a sparse vector where each dimension corresponds to a vocabulary term and its weight represents how strongly that term is associated with the input \u2014 even if the term does not appear literally in the text. This enables implicit query and document expansion.",
+      "source_papers": [
+        "2107.05720"
+      ]
+    },
+    {
+      "id": "q007",
+      "type": "factual",
+      "question": "What is the BEIR benchmark and what makes it useful for evaluating retrieval models?",
+      "reference_answer": "BEIR (Benchmarking IR, arXiv 2104.08663) is a heterogeneous benchmark for zero-shot evaluation of information retrieval models. It contains 18 datasets spanning 9 diverse retrieval tasks (fact verification, question answering, bio-medical retrieval, argument retrieval, etc.) and multiple domains (medical, scientific, news, finance). Models are evaluated without any in-domain training, testing true generalization. BEIR revealed that dense retrieval methods that dominate in-domain (on MS MARCO) often underperform BM25 out-of-domain, motivating research into more generalizable approaches.",
+      "source_papers": [
+        "2104.08663"
+      ]
+    },
+    {
+      "id": "q008",
+      "type": "factual",
+      "question": "What are Self-RAG's reflection tokens, and what decision does each one represent?",
+      "reference_answer": "Self-RAG (arXiv 2310.11511) introduces four types of special reflection tokens that the model generates to control its own retrieval and assess quality: (1) Retrieve \u2014 should retrieval be triggered at this step? (yes/no/continue); (2) ISREL \u2014 is the retrieved passage relevant to the input? (relevant/irrelevant); (3) ISSUP \u2014 does the generated segment factually support its claims using the passage? (fully/partially/not supported); (4) ISUSE \u2014 is the overall response useful for the query? (scored 1\u20135). The model is trained to interleave these tokens with its generation, enabling inference-time control over when to retrieve and how to weight retrieved passages.",
+      "source_papers": [
+        "2310.11511"
+      ]
+    },
+    {
+      "id": "q009",
+      "type": "factual",
+      "question": "What is GPL's training pipeline for unsupervised domain adaptation of dense retrieval?",
+      "reference_answer": "GPL (Generative Pseudo Labeling, arXiv 2112.07577) adapts a dense retriever to a new domain without any labeled data. The pipeline has three stages: (1) Query Generation \u2014 for each passage in the target domain corpus, a T5 encoder-decoder generates three synthetic queries per passage; (2) Negative Mining \u2014 for each synthetic query, an existing dense retrieval model retrieves 50 negative passages (the paper notes in Appendix A that dense retrieval is slightly more effective than BM25 for this step, and the paper's own diagram labels this stage 'Negative Mining via Dense Retrieval'); (3) Pseudo Labeling \u2014 a cross-encoder scores the margin \u03b4 = CE(query, positive) \u2212 CE(query, negative) for each (query, positive, negative) triple; (4) Training \u2014 the bi-encoder is fine-tuned using MarginMSE loss to predict the score margins produced by the cross-encoder. The cross-encoder acts as a quality signal: synthetically generated queries that are ambiguous or off-target produce small margins and contribute little gradient.",
+      "source_papers": [
+        "2112.07577"
+      ]
+    },
+    {
+      "id": "q010",
+      "type": "factual",
+      "question": "What are the seven failure points identified in the engineering paper on RAG systems?",
+      "reference_answer": "The seven failure points (arXiv 2401.05856) are: (1) Missing content \u2014 the answer simply does not exist in any indexed document; (2) Missed top ranked documents \u2014 relevant documents exist but are not retrieved (recall failure); (3) Not in context \u2014 documents were retrieved but too many were returned and the relevant one was cut off; (4) Not extracted \u2014 the answer was in the context but the LLM failed to identify it; (5) Wrong format \u2014 the LLM understood the answer but produced it in the wrong format (e.g., a list when a date was expected); (6) Incorrect specificity \u2014 the answer is too vague or too specific for the use case; (7) Incomplete answer \u2014 a partial answer is given when a complete one was possible.",
+      "source_papers": [
+        "2401.05856"
+      ]
+    },
+    {
+      "id": "q011",
+      "type": "factual",
+      "question": "What distinguishes REPLUG from other RAG approaches, and how does it train the retriever?",
+      "reference_answer": "REPLUG (arXiv 2301.12652) treats the language model as a black box \u2014 it does not modify or fine-tune the generator at all. Instead, it trains only the retriever using the LM's own likelihood scores as a training signal: documents that help the LM predict the input more accurately (lower perplexity) are treated as more relevant. The retriever is trained to maximize the probability of retrieving documents that reduce LM perplexity, using a KL divergence loss between the retriever's document distribution and the LM-scored document distribution. This is useful when the LM is a closed API (e.g., GPT-3).",
+      "source_papers": [
+        "2301.12652"
+      ]
+    },
+    {
+      "id": "q012",
+      "type": "factual",
+      "question": "How does Contriever achieve strong retrieval performance without any labeled training data?",
+      "reference_answer": "Contriever (arXiv 2112.09118) uses contrastive learning on unlabeled text. It creates positive pairs by randomly sampling two independent spans from the same document, treating co-occurrence in the same document as a weak supervision signal for semantic relatedness. It trains a dual encoder using InfoNCE loss with in-batch negatives augmented by a momentum queue (similar to MoCo) to maintain a large and diverse set of negatives efficiently. No query-document relevance labels are used. The resulting model shows competitive zero-shot retrieval performance and can be further fine-tuned on labeled data.",
+      "source_papers": [
+        "2112.09118"
+      ]
+    },
+    {
+      "id": "q013",
+      "type": "conceptual",
+      "question": "What is the core argument for hybrid retrieval (BM25 + dense) over using either method alone?",
+      "reference_answer": "BM25 and dense retrieval have complementary failure modes. BM25 excels at exact-match queries \u2014 rare terms, names, product codes, jargon \u2014 but fails when a relevant document uses different vocabulary than the query (vocabulary mismatch). Dense retrieval captures semantic similarity and handles paraphrase, but can miss documents with exact matching keywords, especially rare or out-of-distribution terms. Combining them consistently outperforms either method on diverse test sets. BEIR (2104.08663) empirically shows that no single method dominates across all domains: dense retrievers fine-tuned on MS MARCO often underperform BM25 on out-of-domain BEIR tasks, directly motivating hybrid retrieval. Bruch et al. (2210.11934) analyze two fusion strategies \u2014 RRF and convex combination (CC) of normalized scores \u2014 and find that CC consistently and significantly outperforms RRF on both in-domain and out-of-domain benchmarks when even minimal training data is available. RRF is useful as a zero-shot, non-parametric baseline but CC (with theoretical min-max normalization) is the empirically stronger choice. Score normalization is straightforward and not a barrier for CC: the paper shows that any bounded normalization scheme yields rank-equivalent results.",
+      "source_papers": [
+        "2104.08663",
+        "2210.11934"
+      ]
+    },
+    {
+      "id": "q014",
+      "type": "conceptual",
+      "question": "What problem does HyDE solve in zero-shot dense retrieval, and what is its key assumption?",
+      "reference_answer": "HyDE (Hypothetical Document Embeddings, arXiv 2212.10496) addresses the embedding space mismatch between short queries and long documents. A short query like 'side effects of ibuprofen' must be embedded close to a long medical document, but they occupy different positions in embedding space due to length and style differences. HyDE's solution: use an LLM to generate a hypothetical document that would answer the query (e.g., a fake journal abstract), then embed that hypothetical document and use it as the retrieval vector. The key assumption is that a generated document \u2014 even if factually wrong in details \u2014 will be stylistically and semantically closer to real relevant documents than the original query, producing a better retrieval signal.",
+      "source_papers": [
+        "2212.10496"
+      ]
+    },
+    {
+      "id": "q015",
+      "type": "conceptual",
+      "question": "What does the 'Lost in the Middle' paper find about how LLMs use long retrieved contexts, and what does this imply for RAG re-ranking?",
+      "reference_answer": "Liu et al. (arXiv 2307.03172) find a strong primacy and recency bias: LLMs perform best when relevant information is at the beginning or end of the context window, and performance drops significantly when it is placed in the middle. This holds across model sizes and task types, and worsens as the number of retrieved documents increases. For RAG design, this means that re-ranking is not just about relevance but also about ordering \u2014 the most relevant retrieved passage should be placed first (or last) in the prompt. Systems that return many documents without careful ordering will systematically underperform, even if the right document was retrieved.",
+      "source_papers": [
+        "2307.03172"
+      ]
+    },
+    {
+      "id": "q016",
+      "type": "conceptual",
+      "question": "Why can cross-encoders not be used for first-stage retrieval over large corpora, and what role do they play instead?",
+      "reference_answer": "Cross-encoders (e.g., monoT5/2003.06713) score a query-document pair by running full self-attention over the concatenated query and document text. This produces high-accuracy relevance scores but requires a separate forward pass for every (query, document) pair at inference time \u2014 linear in corpus size O(n). For a corpus of millions of documents, this is computationally infeasible for real-time retrieval. Bi-encoders (DPR/2004.04906, ColBERT/2004.12832) sidestep this by encoding queries and documents independently: document embeddings are pre-computed and stored in an ANN index, so at query time only the query needs to be encoded, and retrieval reduces to a fast nearest-neighbor search in vector space. ColBERT (Section 1 of 2004.12832) explicitly contrasts the two architectures: cross-encoders achieve the highest accuracy but cannot be applied to the full corpus, while bi-encoders trade some accuracy for the scalability needed for first-stage retrieval. The standard two-stage pipeline \u2014 used in monoT5 (2003.06713) \u2014 uses a bi-encoder to retrieve a small candidate set (e.g., BM25 top-1000) and a cross-encoder to re-score only those candidates for high-precision final ranking.",
+      "source_papers": [
+        "2003.06713",
+        "2004.12832",
+        "2004.04906"
+      ]
+    },
+    {
+      "id": "q017",
+      "type": "conceptual",
+      "question": "What is the key insight behind INSTRUCTOR's approach to instruction-tuned embeddings, and why is it more flexible than training task-specific models?",
+      "reference_answer": "INSTRUCTOR (arXiv 2212.09741) is based on the insight that the optimal embedding for a piece of text depends on the downstream task: an embedding useful for retrieval differs from one useful for clustering or sentiment classification. Instead of training separate models per task, INSTRUCTOR prepends a natural language task instruction to each text before encoding (e.g., 'Represent the scientific paper for retrieval:'). The model learns during training to produce task-appropriate representations conditioned on the instruction string. At inference, only the instruction changes \u2014 no fine-tuning is required. A single INSTRUCTOR model handles 70+ tasks by changing the instruction, outperforming task-specific fine-tuned baselines.",
+      "source_papers": [
+        "2212.09741"
+      ]
+    },
+    {
+      "id": "q018",
+      "type": "conceptual",
+      "question": "What is REALM's approach to retrieval-augmented pre-training, and how does it differ from RAG's use of retrieval?",
+      "reference_answer": "REALM (arXiv 2002.08909) integrates retrieval into the pre-training phase itself, not just fine-tuning. During pre-training, a masked language model must predict masked tokens conditioned on both the input and documents retrieved from a knowledge corpus. The retriever and the LM are jointly trained: the LM's perplexity on masked tokens provides a training signal for the retriever (via MIPS + EM-style gradient), and the document index must be periodically refreshed as the retriever updates. RAG (2005.11401), by contrast, starts from a separately pre-trained DPR retriever and fine-tunes retriever + BART generator jointly on downstream tasks \u2014 retrieval is not part of pre-training. REALM's approach theoretically produces a retriever more aligned with language understanding, but is more complex to train.",
+      "source_papers": [
+        "2002.08909",
+        "2005.11401"
+      ]
+    },
+    {
+      "id": "q019",
+      "type": "conceptual",
+      "question": "What does Adaptive-RAG argue about matching retrieval strategy to query complexity, and what are its three routing strategies?",
+      "reference_answer": "Adaptive-RAG (arXiv 2403.14403) argues that using the same retrieval strategy for all queries is inefficient: simple factual queries can often be answered from LLM parametric knowledge without retrieval (adding latency unnecessarily), while complex multi-hop questions require iterative retrieval. Adaptive-RAG trains a small classifier that predicts query complexity and routes each query to one of three strategies: (A) No retrieval \u2014 the LLM answers from parametric memory alone; (B) Single-step retrieval \u2014 one retrieval round, standard RAG; (C) Multi-step retrieval \u2014 iterative retrieval where each retrieved passage informs the next query. The classifier is trained on data labeled by observing which strategy produces correct answers.",
+      "source_papers": [
+        "2403.14403"
+      ]
+    },
+    {
+      "id": "q020",
+      "type": "conceptual",
+      "question": "Why does SPLADE outperform BM25 on semantic queries despite both producing sparse term-weight vectors?",
+      "reference_answer": "Both BM25 and SPLADE produce sparse term-weight vectors indexed by vocabulary, but their mechanisms differ fundamentally. BM25 weights are purely statistical (term frequency \u00d7 IDF) and can only assign weight to terms that literally appear in the text. SPLADE uses a neural MLM head to produce term weights conditioned on the full context, enabling two forms of expansion: (1) Query expansion \u2014 the query 'automobile' can activate terms like 'car', 'vehicle', 'sedan'; (2) Document expansion \u2014 a document about 'myocardial infarction' can activate 'heart attack'. This closes the vocabulary mismatch gap that BM25 cannot bridge. SPLADE also benefits from end-to-end training on relevance labels, while BM25 uses no labeled data.",
+      "source_papers": [
+        "2107.05720"
+      ]
+    },
+    {
+      "id": "q021",
+      "type": "conceptual",
+      "question": "What is Reciprocal Rank Fusion (RRF) and why is it preferred over score-based fusion for combining retrieval results?",
+      "reference_answer": "Reciprocal Rank Fusion (RRF) combines multiple ranked lists by scoring each document as the sum of 1/(k + rank_i) across all ranked lists, where k is a smoothing constant (typically 60) and rank_i is the document's position in list i. The appeal of RRF is that it operates on ranks rather than raw scores, so it requires no score normalization or calibration across retrieval systems with incompatible scales (e.g., BM25 scores vs cosine similarities). This makes RRF attractive as a zero-shot, non-parametric combination method when no labeled data is available for tuning. However, Bruch et al. (2210.11934) directly challenge the claim that RRF is the superior choice: their analysis shows that a convex combination of normalized scores (CC) consistently and significantly outperforms RRF empirically on both in-domain and out-of-domain datasets. They also show that the normalization concern motivating RRF is largely a non-issue \u2014 any bounded normalization (min-max, z-score, etc.) produces rank-equivalent convex combinations and the parameter \u03b1 can be tuned with fewer than 5% of training queries. Additionally, they find that RRF is itself sensitive to its \u03b7 parameter when tuned, generalizing poorly out-of-domain. In summary: RRF is a practical zero-shot fallback, but when any labeled data is available, a tuned convex combination is the empirically stronger choice.",
+      "source_papers": [
+        "2210.11934"
+      ]
+    },
+    {
+      "id": "q022",
+      "type": "multi_hop",
+      "question": "Which papers in this corpus propose methods that combine both a retrieval step and an explicit re-ranking or filtering step as part of their core contribution?",
+      "reference_answer": "Papers that combine retrieval with an explicit inference-time re-ranking or filtering step as a core contribution: (1) RECOMP (2310.04408) retrieves passages then applies a compressor model to filter and compress context before generation \u2014 the compression step is the paper's primary contribution. (2) Corrective RAG/CRAG (2401.15884) retrieves documents then applies a lightweight retrieval evaluator that scores document relevance, discards low-confidence results, and triggers a web search fallback \u2014 the evaluator-gated filtering is the core mechanism. (3) Self-RAG (2310.11511) generates ISREL tokens to evaluate whether each retrieved passage is relevant to the input, and ISSUP tokens to score whether generated text is factually supported \u2014 these act as an inline filtering layer over retrieved passages at inference time. Papers that use cross-encoders in their training pipeline only (not at inference): DRAGON (2302.07452) uses multiple retriever-generated soft labels for training data augmentation; RocketQA (2010.08191) uses a cross-encoder to denoise hard negatives during training. Neither applies re-ranking at inference.",
+      "source_papers": [
+        "2310.04408",
+        "2401.15884",
+        "2310.11511",
+        "2302.07452",
+        "2010.08191"
+      ]
+    },
+    {
+      "id": "q023",
+      "type": "multi_hop",
+      "question": "Which embedding models in this corpus report evaluation results on the MTEB benchmark, and which task categories does MTEB cover?",
+      "reference_answer": "MTEB (Massive Text Embedding Benchmark, arXiv 2210.07316) covers 8 task categories: Bitext Mining, Classification, Clustering, Pair Classification, Reranking, Retrieval, STS (Semantic Textual Similarity), and Summarization \u2014 across 58 datasets total (56 in the English subset) and 112 languages. Models in this corpus that explicitly report MTEB results: E5 (2212.03533) reports results on the 56-dataset English MTEB subset; INSTRUCTOR (2212.09741) reports MTEB results across 56 datasets; GTE (2308.03281) reports results on the 56-dataset English MTEB subset; E5-mistral (2401.00368) reports MTEB results and achieves state-of-the-art on the English subset. BGE M3 (2402.03216) does not report MTEB results \u2014 it evaluates on MIRACL, MKQA, MLDR (multilingual long-doc), and NarrativeQA instead.",
+      "source_papers": [
+        "2210.07316",
+        "2212.03533",
+        "2212.09741",
+        "2308.03281",
+        "2401.00368"
+      ]
+    },
+    {
+      "id": "q024",
+      "type": "multi_hop",
+      "question": "Which papers in this corpus explicitly address the problem of retrieval quality degrading on out-of-domain data, and what different solutions do they propose?",
+      "reference_answer": "BEIR (2104.08663) identifies and quantifies the out-of-domain generalization problem, showing that dense retrievers fine-tuned on MS MARCO often underperform BM25 when applied to other domains zero-shot. Papers in this corpus that explicitly address this problem and their proposed solutions: (1) Contriever (2112.09118) \u2014 fully unsupervised contrastive pre-training on unlabeled text, eliminating in-domain bias entirely; demonstrates competitive zero-shot retrieval performance across BEIR domains. (2) GPL (2112.07577) \u2014 unsupervised target-domain adaptation: generates synthetic queries for each passage, mines negatives, scores triples with a cross-encoder, and fine-tunes the retriever on pseudo-labeled data \u2014 no labels from the target domain are required. (3) DRAGON (2302.07452) \u2014 diverse data augmentation with multiple retriever-based soft-label teachers (rather than a single cross-encoder) and progressive training, explicitly targeting the supervised/zero-shot tradeoff; DRAGON+ matches SPLADE++ on BEIR zero-shot. Note: SPLADE (2107.05720) is primarily an architecture paper (MLM-head sparse representations on MS MARCO) and does not explicitly frame its contribution as an out-of-domain robustness solution; BEIR is not evaluated in that paper.",
+      "source_papers": [
+        "2104.08663",
+        "2112.09118",
+        "2112.07577",
+        "2302.07452"
+      ]
+    },
+    {
+      "id": "q025",
+      "type": "multi_hop",
+      "question": "What do RAPTOR and GraphRAG have in common in their motivation and approach, and how do they differ structurally?",
+      "reference_answer": "Both RAPTOR (arXiv 2401.18059) and GraphRAG (arXiv 2404.16130) are motivated by the failure of flat chunking-based RAG on global or thematic questions that require synthesizing information spread across many documents. Both build multi-level document representations that allow retrieval at different levels of abstraction. Structurally they differ: RAPTOR recursively clusters leaf-level chunks, summarizes each cluster, then clusters and summarizes the summaries \u2014 producing a tree of increasing abstraction where any level can be queried. GraphRAG extracts entities and relationships to build a knowledge graph, detects communities in that graph, and generates community summaries at multiple levels \u2014 retrieval is then over both the graph structure and the summaries.",
+      "source_papers": [
+        "2401.18059",
+        "2404.16130"
+      ]
+    },
+    {
+      "id": "q026",
+      "type": "multi_hop",
+      "question": "Which papers in the corpus propose methods for reducing hallucination or improving faithfulness in RAG-generated answers?",
+      "reference_answer": "Multiple papers address hallucination/faithfulness from different angles: (1) Self-RAG (2310.11511) introduces ISSUP reflection tokens that score whether generated text is supported by retrieved passages, and trains the model to prefer supported outputs; (2) Chain-of-Note (2311.09210) trains the model to generate reading notes for each retrieved document before answering, making the reasoning process explicit and grounding the answer in retrieved evidence; (3) CRAG (2401.15884) uses a retrieval evaluator to reject low-confidence retrieved documents, falling back to web search rather than generating from low-quality context; (4) RECOMP (2310.04408) compresses retrieved context to remove irrelevant passages, reducing the noise that leads to hallucination; (5) RAGAS (2309.15217) provides a faithfulness metric that measures whether generated claims are grounded in retrieved context.",
+      "source_papers": [
+        "2310.11511",
+        "2311.09210",
+        "2401.15884",
+        "2310.04408",
+        "2309.15217"
+      ]
+    },
+    {
+      "id": "q027",
+      "type": "multi_hop",
+      "question": "Which papers in this corpus propose retrieval or RAG architectures where the retriever and generator are trained jointly end-to-end, versus approaches that keep them separate?",
+      "reference_answer": "Joint training (retriever receives gradient signal from the generator): REALM (2002.08909) jointly pre-trains retriever and masked LM end-to-end using MIPS + EM-style gradients, with periodic index refresh; RAG (2005.11401) jointly fine-tunes DPR retriever and BART generator on downstream tasks, treating documents as latent variables; Atlas (2208.03299) jointly trains a Contriever-based retriever and FiD-style seq2seq model using four alternative loss functions \u2014 Attention Distillation, EMDR\u00b2, PDist, and LOOP \u2014 all of which distill supervisory signal from the language model back into the retriever. Atlas also evaluates a fixed-retriever variant and strategies that freeze the retriever (e.g., query-side fine-tuning only) for compute efficiency. Separate/modular approaches: DPR (2004.04906) trains the retriever independently on labeled QA pairs with no generator feedback; REPLUG (2301.12652) treats the LM as a black box and trains only the retriever via LM perplexity, explicitly never touching the generator weights; FiD (2007.01282) uses DPR as a fixed retriever during generator fine-tuning \u2014 the paper's conclusion explicitly notes that end-to-end retrieval learning is planned as future work. The joint vs. separate axis matters because joint training is more expressive but requires generator access and adds index-refresh overhead; modular approaches are easier to deploy and can use closed-model LLMs.",
+      "source_papers": [
+        "2002.08909",
+        "2005.11401",
+        "2208.03299",
+        "2004.04906",
+        "2301.12652",
+        "2007.01282"
+      ]
+    },
+    {
+      "id": "q028",
+      "type": "multi_hop",
+      "question": "According to the papers in this corpus, what are the main ways that the chunking or indexing strategy affects retrieval quality?",
+      "reference_answer": "Several papers discuss chunking and indexing effects from different angles: (1) The Seven Failure Points paper (2401.05856) Section 6.1 identifies chunk size as a key design variable: if chunks are too small, questions whose answers span multiple passages cannot be answered; if chunks are too large, the context includes irrelevant text that adds noise to generation. The paper distinguishes heuristic chunking (by punctuation or paragraph) from semantic chunking and calls for more systematic evaluation. It also notes that embedding strategy and chunk size interact \u2014 the same embedding model may perform very differently at different granularities. (2) RAPTOR (2401.18059) argues that flat fixed-size chunking fundamentally fails for queries requiring synthesis or abstraction across many passages, motivating its recursive clustering-and-summarization tree. (3) GraphRAG (2404.16130) makes the same critique, arguing flat chunks lose relational and community-level information that only emerges when considering documents together. (4) RAG (2005.11401) uses 100-word non-overlapping Wikipedia passage chunks \u2014 this specific granularity was a deliberate design choice affecting what can be retrieved per passage. (5) FiD (2007.01282) shows that retrieving and encoding 100 passages instead of 10 significantly improves accuracy, demonstrating that retrieval depth (how many chunks are considered) interacts with chunking granularity. No paper in the corpus provides a controlled empirical comparison of chunk sizes on the same dataset.",
+      "source_papers": [
+        "2401.05856",
+        "2401.18059",
+        "2404.16130",
+        "2005.11401",
+        "2007.01282"
+      ]
+    },
+    {
+      "id": "q029",
+      "type": "unanswerable",
+      "question": "What does the literature in this corpus recommend for optimal chunk sizes when indexing domain-specific financial or legal documents?",
+      "reference_answer": "The corpus does not contain papers that provide domain-specific chunk size recommendations for financial or legal documents. While the Seven Failure Points paper (2401.05856) discusses chunking as a failure mode in general terms, and RAPTOR (2401.18059) critiques fixed-size chunking conceptually, no paper in this corpus runs controlled experiments over chunk sizes on financial or legal corpora. A well-functioning RAG system should state it cannot answer this question from the available documents.",
+      "source_papers": []
+    },
+    {
+      "id": "q030",
+      "type": "unanswerable",
+      "question": "What do the papers in this corpus say about using RAG for code generation, code completion, or software engineering tasks?",
+      "reference_answer": "None of the papers in this corpus specifically address RAG applied to code generation, code completion, or software engineering. The corpus focuses on natural language retrieval over text documents for question answering, fact verification, and knowledge-intensive NLP. A correct response should acknowledge this gap rather than generalizing from text-based RAG findings.",
+      "source_papers": []
+    },
+    {
+      "id": "q031",
+      "type": "unanswerable",
+      "question": "Which papers in this corpus evaluate retrieval-augmented generation on real-time or streaming data sources, such as live news or social media feeds?",
+      "reference_answer": "No papers in this corpus address retrieval from real-time or streaming data sources. The corpora used across all papers are static: Wikipedia snapshots, MS MARCO, BEIR datasets. CRAG (2401.15884) uses web search as a fallback but treats it as a fixed external tool, not a streaming ingestion pipeline. The corpus does not cover real-time RAG architecture.",
+      "source_papers": []
+    }
+  ]
+}

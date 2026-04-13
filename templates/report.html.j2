@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG Retrieval Benchmark</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px; color: #1a1a1a; background: #f7f8fa;
+    max-width: 960px; margin: 0 auto; padding: 32px 24px;
+  }
+  h1 { font-size: 36px; font-weight: 700; margin-bottom: 20px; }
+  h2 { font-size: 20px; font-weight: 700; margin: 60px 0 16px; color: #111; }
+  h3 { font-size: 14px; font-weight: 600; color: #333; margin: 28px 0 10px; }
+  .meta-table {
+    border-collapse: collapse; margin-bottom: 36px;
+    font-size: 14px; color: #444; width: auto;
+  }
+  .meta-table td {
+    padding: 5px 16px 5px 0; border: none; border-bottom: none;
+    vertical-align: top; font-variant-numeric: normal; white-space: normal;
+  }
+  .meta-table .meta-label {
+    font-weight: 600; color: #222; white-space: nowrap;
+    padding-right: 20px; width: 1%;
+  }
+  .meta-table a { color: #2563eb; text-decoration: none; }
+  .meta-table a:hover { text-decoration: underline; }
+  .section-subtitle { font-size: 14px; color: #888; margin: -6px 0 24px; line-height: 1.6; }
+
+  /* --- Cards --- */
+  .card {
+    background: #fff; border: 1px solid #e2e4e8; border-radius: 10px;
+    padding: 20px 24px; margin-bottom: 28px; overflow-x: auto;
+  }
+  .card-highlight {
+    border-left: 4px solid #1a6b2a; background: #f0faf3;
+  }
+
+  /* --- Top configurations --- */
+  .top-config-card {
+    background: #fff; border: 1px solid #e2e4e8; border-left: 4px solid #1a6b2a;
+    border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
+  }
+  .top-config-header {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 16px;
+  }
+  .top-config-rank {
+    font-size: 36px; font-weight: 800; color: #1a6b2a;
+    line-height: 1; width: 52px; flex-shrink: 0; font-variant-numeric: tabular-nums;
+  }
+  .top-config-components {
+    flex: 1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .component-group { text-align: center; }
+  .component-label {
+    font-size: 10px; color: #888; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 5px;
+  }
+  .component-arrow { color: #ccc; font-size: 14px; margin-top: 14px; }
+  .top-config-score {
+    font-size: 32px; font-weight: 700; color: #1a6b2a;
+    font-variant-numeric: tabular-nums; flex-shrink: 0;
+  }
+  .top-config-metrics {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
+    border-top: 1px solid #eef0f3; padding-top: 16px;
+  }
+  .metric-item .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .metric-item .metric-value {
+    font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; color: #1a1a1a;
+  }
+
+  /* --- Metric bars --- */
+  .bar-group { margin-bottom: 18px; }
+  .bar-label {
+    display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px;
+  }
+  .bar-label span:first-child { font-weight: 600; color: #333; }
+  .bar-label span:last-child { font-variant-numeric: tabular-nums; color: #555; font-family: monospace; }
+  .bar-track { background: #f0f1f5; border-radius: 3px; height: 8px; overflow: hidden; }
+  .bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.4s;
+  }
+  .bar-best { background: #1a6b2a; }
+  .bar-good { background: #2563eb; }
+  .bar-low  { background: #dc2626; }
+
+  /* --- Tables --- */
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th {
+    background: #f0f1f5; font-weight: 600; text-align: left;
+    padding: 7px 10px; border-bottom: 2px solid #d0d3da; white-space: nowrap;
+  }
+  td {
+    padding: 6px 10px; border-bottom: 1px solid #eef0f3;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  tr:hover td { background: #f8f9fb; }
+  .num { text-align: right; font-family: monospace; }
+  .best { background: #e6f4ea !important; font-weight: 600; color: #1a6b2a; }
+  .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 11px; font-weight: 500;
+  }
+  .tag-fixed_size { background: #e8f0fe; color: #1a56db; }
+  .tag-sentence   { background: #fdf0e8; color: #b45309; }
+  .tag-semantic   { background: #f0fdf4; color: #166534; }
+  .tag-minilm     { background: #fef9e7; color: #92400e; }
+  .tag-bge_m3     { background: #fce7f3; color: #9d174d; }
+  .tag-openai     { background: #ede9fe; color: #4c1d95; }
+  .tag-bm25       { background: #fee2e2; color: #991b1b; }
+  .tag-hybrid     { background: #fef3c7; color: #92400e; }
+  .tag-reranker   { background: #ecfdf5; color: #065f46; }
+  .tag-semantic_search { background: #e0e7ff; color: #3730a3; }
+  .dash { color: #bbb; }
+
+  /* --- Tabs (CSS-only) --- */
+  .tabs-wrap { margin-bottom: 20px; }
+  .tabs-wrap > input[type=radio] { display: none; }
+  .tabs-nav { display: flex; gap: 2px; border-bottom: 2px solid #d0d3da; }
+  .tabs-nav label {
+    padding: 8px 16px; cursor: pointer; border-radius: 6px 6px 0 0;
+    font-size: 12px; font-weight: 500; color: #555;
+    border: 1px solid transparent; border-bottom: none; margin-bottom: -2px;
+  }
+  .tabs-nav label:hover { background: #f0f1f5; color: #222; }
+  .tab-panel { display: none; }
+  #tab-all:checked         ~ .tab-panels > #panel-all         { display: block; }
+  #tab-factual:checked     ~ .tab-panels > #panel-factual     { display: block; }
+  #tab-conceptual:checked  ~ .tab-panels > #panel-conceptual  { display: block; }
+  #tab-multi_hop:checked   ~ .tab-panels > #panel-multi_hop   { display: block; }
+  #tab-all:checked          ~ .tabs-nav label[for=tab-all]         ,
+  #tab-factual:checked      ~ .tabs-nav label[for=tab-factual]     ,
+  #tab-conceptual:checked   ~ .tabs-nav label[for=tab-conceptual]  ,
+  #tab-multi_hop:checked    ~ .tabs-nav label[for=tab-multi_hop]   {
+    background: #fff; border-color: #d0d3da; color: #1a1a1a; font-weight: 600;
+  }
+
+  /* --- Aggregate bar colours: winner = soft green, rest = soft blue --- */
+  .bar-winner { background: #29783e; }
+  .bar-runner { background: #2e67de; }
+
+  @media (max-width: 600px) {
+    .top-config-metrics { display: none; }
+  }
+
+  /* --- Footnote --- */
+  .footnote { font-size: 11px; color: #888; margin-top: 48px; line-height: 1.6; text-align: center; }
+  .footnote dt { font-weight: 600; color: #555; margin-top: 8px; }
+  .footnote dd { margin-left: 0; }
+</style>
+</head>
+<body>
+
+{# ─── Macro: render_table ─────────────────────────────────────────────────── #}
+{% macro render_table(rows, b, qtype=none) %}
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Chunker</th>
+      <th>Embedder</th>
+      <th>Retriever</th>
+      <th class="num">Overall</th>
+      <th class="num">Context Precision</th>
+      <th class="num">Context Recall</th>
+      <th class="num">Faithfulness</th>
+      <th class="num">Answer Relevance</th>
+      <th class="num">Latency (ms)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td style="color:#aaa;font-size:11px">{{ loop.index }}</td>
+      <td><span class="tag tag-{{ row.chunker }}">{{ display_names.get(row.chunker, row.chunker) }}</span></td>
+      <td><span class="tag tag-{{ row.embedder }}">{{ display_names.get(row.embedder, row.embedder) }}</span></td>
+      <td><span class="tag tag-{{ row.retriever }}">{{ display_names.get(row.retriever, row.retriever) }}</span></td>
+      {% set ov = row.overall %}
+      <td class="num {% if ov is not none and b.get('overall') == ov %}best{% endif %}">
+        {{ "%.3f" | format(ov) if ov is not none else '<span class="dash">—</span>' }}
+      </td>
+      {% set cp = row.context_precision %}
+      <td class="num {% if cp is not none and b.get('context_precision') == cp %}best{% endif %}">
+        {{ "%.3f" | format(cp) if cp is not none else '<span class="dash">—</span>' }}
+      </td>
+      {% set cr = row.context_recall %}
+      <td class="num {% if cr is not none and b.get('context_recall') == cr %}best{% endif %}">
+        {{ "%.3f" | format(cr) if cr is not none else '<span class="dash">—</span>' }}
+      </td>
+      {% set fa = row.faithfulness %}
+      <td class="num {% if fa is not none and b.get('faithfulness') == fa %}best{% endif %}">
+        {{ "%.3f" | format(fa) if fa is not none else '<span class="dash">—</span>' }}
+      </td>
+      {% set ar = row.answer_relevance %}
+      <td class="num {% if ar is not none and b.get('answer_relevance') == ar %}best{% endif %}">
+        {{ "%.3f" | format(ar) if ar is not none else '<span class="dash">—</span>' }}
+      </td>
+      <td class="num">{{ row.avg_retrieval_ms }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+<h1>RAG Retrieval Bench Results</h1>
+<table class="meta-table">
+  <tr>
+    <td class="meta-label">Corpus</td>
+    <td>69 ArXiv papers on RAG, dense retrieval, and embedding models</td>
+  </tr>
+  <tr>
+    <td class="meta-label">Questions</td>
+    <td>31 across four types &mdash; factual, conceptual, multi-hop, and unanswerable</td>
+  </tr>
+  <tr>
+    <td class="meta-label">Configurations</td>
+    <td>3 chunkers &times; 3 embedders &times; 4 retrieval strategies = 36 configurations, 1116 scored results total</td>
+  </tr>
+  <tr>
+    <td class="meta-label">Metrics</td>
+    <td>Context Precision, Context Recall &amp; Faithfulness are LLM-judged via RAGAS; Answer Relevance is cosine similarity. All metrics are 0&ndash;1, higher is better</td>
+  </tr>
+  <tr>
+    <td class="meta-label">Judge</td>
+    <td>Groq openai/gpt-oss-120b at temperature&nbsp;0</td>
+  </tr>
+  <tr>
+    <td class="meta-label">GitHub</td>
+    <td><a href="https://github.com/jonasvanbuel/rag-retrieval-bench" target="_blank" rel="noopener">github.com/jonasvanbuel/rag-retrieval-bench</a></td>
+  </tr>
+</table>
+
+<!-- ======================================================
+     SECTION 0: Top 3 Configurations
+     ====================================================== -->
+
+<h2>Top 3 Configurations</h2>
+
+{% for cfg in summary[:3] %}
+<div class="top-config-card">
+  <div class="top-config-header">
+    <div class="top-config-rank">#{{ loop.index }}</div>
+    <div class="top-config-components">
+      <div class="component-group">
+        <div class="component-label">Chunker</div>
+        <span class="tag tag-{{ cfg.chunker }}">{{ display_names.get(cfg.chunker, cfg.chunker) }}</span>
+      </div>
+      <div class="component-arrow">&#8594;</div>
+      <div class="component-group">
+        <div class="component-label">Embedder</div>
+        <span class="tag tag-{{ cfg.embedder }}">{{ display_names.get(cfg.embedder, cfg.embedder) }}</span>
+      </div>
+      <div class="component-arrow">&#8594;</div>
+      <div class="component-group">
+        <div class="component-label">Retrieval</div>
+        <span class="tag tag-{{ cfg.retriever }}">{{ display_names.get(cfg.retriever, cfg.retriever) }}</span>
+      </div>
+    </div>
+    <div class="top-config-score">{{ "%.3f" | format(cfg.overall) }}</div>
+  </div>
+  <div class="top-config-metrics">
+    <div class="metric-item">
+      <div class="metric-label">Context Precision</div>
+      <div class="metric-value">{{ "%.3f" | format(cfg.context_precision) if cfg.context_precision is not none else "—" }}</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label">Context Recall</div>
+      <div class="metric-value">{{ "%.3f" | format(cfg.context_recall) if cfg.context_recall is not none else "—" }}</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label">Faithfulness</div>
+      <div class="metric-value">{{ "%.3f" | format(cfg.faithfulness) if cfg.faithfulness is not none else "—" }}</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label">Answer Relevance</div>
+      <div class="metric-value">{{ "%.3f" | format(cfg.answer_relevance) if cfg.answer_relevance is not none else "—" }}</div>
+    </div>
+    <div class="metric-item">
+      <div class="metric-label">Avg Retrieval</div>
+      <div class="metric-value">{{ cfg.avg_retrieval_ms | int }} ms</div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- ======================================================
+     SECTION 1: Score vs. latency scatter (moved before component breakdown)
+     ====================================================== -->
+
+<h2>Overall Score vs. Per-Query Retrieval Latency</h2>
+<p class="section-subtitle">All {{ summary | length }} configurations &middot; hover any dot for details</p>
+<div class="card" style="position:relative; padding-bottom:16px;">
+  {{ scatter_block | safe }}
+</div>
+
+<!-- ======================================================
+     SECTION 2: Aggregate Results by Pipeline Component
+     ====================================================== -->
+
+<h2>Aggregate Results by Pipeline Component</h2>
+<p class="section-subtitle">
+  Scores below are averaged across all configurations sharing that component only.
+</p>
+
+<h3>Chunking Strategy</h3>
+<div class="card">
+  {% for chunker in component_order.chunkers %}
+  <div class="bar-group">
+    <div class="bar-label">
+      <span>{{ display_names.get(chunker, chunker) }}</span>
+      <span>{{ "%.3f" | format(component_avgs[chunker].overall) }}</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill {{ 'bar-winner' if chunker == best_chunker else 'bar-runner' }}"
+           style="width: {{ (component_avgs[chunker].overall / max_score * 100) | int }}%"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h3>Embedding Model</h3>
+<div class="card">
+  {% for embedder in component_order.embedders %}
+  <div class="bar-group">
+    <div class="bar-label">
+      <span>{{ display_names.get(embedder, embedder) }}</span>
+      <span>{{ "%.3f" | format(component_avgs_embedder[embedder].overall) }}</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill {{ 'bar-winner' if embedder == best_embedder else 'bar-runner' }}"
+           style="width: {{ (component_avgs_embedder[embedder].overall / max_score * 100) | int }}%"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h3>Retrieval Strategy</h3>
+<div class="card">
+  {% for retriever in component_order.retrievers %}
+  <div class="bar-group">
+    <div class="bar-label">
+      <span>{{ display_names.get(retriever, retriever) }}</span>
+      <span>{{ "%.3f" | format(component_avgs_retriever[retriever].overall) }} &nbsp;·&nbsp; {{ component_avgs_retriever[retriever].latency | int }} ms avg</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill {{ 'bar-winner' if retriever == best_retriever else 'bar-runner' }}"
+           style="width: {{ (component_avgs_retriever[retriever].overall / max_score * 100) | int }}%"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ======================================================
+     SECTION 3: All configurations — ranked by overall score
+     ====================================================== -->
+
+<h2>All Configurations</h2>
+<p class="section-subtitle">All {{ summary | length }} pipeline configurations ranked by overall score, broken down by question type. Scores are averages across all questions in each category.</p>
+
+<div class="tabs-wrap">
+  <input type="radio" name="qtype-tab" id="tab-all" checked>
+  <input type="radio" name="qtype-tab" id="tab-factual">
+  <input type="radio" name="qtype-tab" id="tab-conceptual">
+  <input type="radio" name="qtype-tab" id="tab-multi_hop">
+
+  <div class="tabs-nav">
+    <label for="tab-all">All questions</label>
+    <label for="tab-factual">Factual</label>
+    <label for="tab-conceptual">Conceptual</label>
+    <label for="tab-multi_hop">Multi-hop</label>
+  </div>
+
+  <div class="tab-panels">
+
+    <div class="tab-panel card" id="panel-all">
+      {{ render_table(summary, bests) }}
+    </div>
+
+    {% for qtype in qtypes %}
+    <div class="tab-panel card" id="panel-{{ qtype }}">
+      {% set rows = breakdowns[qtype] %}
+      {% set b = breakdown_bests[qtype] %}
+      {% if rows %}
+        {{ render_table(rows, b, qtype=qtype) }}
+      {% else %}
+        <p style="color:#888;font-size:12px;padding:8px 0">No results for this question type yet.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+
+<p class="footnote">Generated {{ generated_date }}.</p>
+
+</body>
+</html>

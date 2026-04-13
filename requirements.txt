@@ -1,0 +1,17 @@
+# --- Chunking ---
+nltk>=3.8                      # sentence tokenizer (sentence-boundary + semantic chunkers)
+
+# --- Embeddings ---
+sentence-transformers>=3.0.0   # MiniLM, BGE-M3, cross-encoder re-ranker
+openai>=1.0.0                  # Groq-compatible client (harness) + OpenAI embeddings embedder
+
+# --- Retrieval ---
+rank-bm25>=0.2.2               # BM25 index
+numpy>=1.26.0                  # embedding matrices + cosine similarity (semantic retriever)
+
+# --- Evaluation ---
+ragas>=0.2.0                   # faithfulness, context precision/recall (pulls langchain deps)
+
+# --- Utilities ---
+python-dotenv>=1.0.0           # load .env for API keys
+jinja2>=3.1.0                  # HTML report (scripts/generate_report.py)
