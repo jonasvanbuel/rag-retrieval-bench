@@ -209,7 +209,6 @@ def main() -> None:
     embedder_cache: dict[str, object]      = {}
 
     # DEV CACHE — speeds up repeated runs during development.
-    # Delete .cache/ to force recompute. Strip this block before release.
     import pickle
     CACHE_DIR = Path(".cache")
     CACHE_DIR.mkdir(exist_ok=True)
